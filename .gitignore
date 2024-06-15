@@ -130,3 +130,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+weights/rd16-uni.pth
+weights/rd64-uni-refined.pth
+weights/rd64-uni.pth
+weights.zip
