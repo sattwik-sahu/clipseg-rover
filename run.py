@@ -149,13 +149,13 @@ def main():
     # model = load_model()
     transform = get_transform()
     
-    # # Dummy input for exporting the model
+    # Dummy input for exporting the model
     # dummy_input = torch.randn(1, 3, 352, 352)
     
-    # # Export model to ONNX
+    # Export model to ONNX
     # onnx_file_path = 'model.onnx'
     # export_model_to_onnx(model, dummy_input, onnx_file_path)
-    # # Quantize the ONNX model
+    # Quantize the ONNX model
     quantized_model_path = 'model_quantized.onnx'
     # quantize_model(onnx_file_path, quantized_model_path)
 
