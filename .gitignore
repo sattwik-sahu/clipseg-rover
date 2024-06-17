@@ -134,3 +134,5 @@ weights/rd16-uni.pth
 weights/rd64-uni-refined.pth
 weights/rd64-uni.pth
 weights.zip
+model_quantized.onnx
+model.onnx
