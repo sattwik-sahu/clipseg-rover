@@ -165,13 +165,6 @@ def main():
     # Load ONNX model for inference
     # ort_session = load_onnx_model(onnx_file_path)
     
-    # Publisher for the predicted images
-    # image_pub = rospy.Publisher("/predicted_images", String, queue_size=1)
-    
-    # # Subscribe to the image topic
-    # rospy.Subscriber("/camera/color/image_raw", RosImage, image_callback, (ort_session, transform, prompts, bridge, image_pub),  queue_size=1, buff_size=2**24)
-    # rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", RosImage, depth_callback, (bridge, ),  queue_size=1, buff_size=2**24)
-    # rospy.Subscriber("/camera/color/camera_info", CameraInfo, camera_info_callback)
     ros_pack = RosPack(ort_session, transform, prompts)
     rospy.spin()
 
