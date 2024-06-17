@@ -215,12 +215,10 @@ class CLIPDenseBase(nn.Module):
             cond = conditional
 
         # compute conditional from image
-        
         elif conditional is not None and type(conditional) == torch.Tensor:
             with torch.no_grad():
                 cond, _, _ = self.visual_forward(conditional)
         else:
-            print(type(conditional))
             raise ValueError('invalid conditional')
         return cond   
 
@@ -346,10 +344,8 @@ class CLIPDensePredT(CLIPDenseBase):
 
 
     def forward(self, inp_image, conditional=None, return_features=False, mask=None):
-        # print(return_features)
-        # assert type(return_features) == bool
-        return_features=True
-        conditional = 'person'
+
+        assert type(return_features) == bool
 
         inp_image = inp_image.to(self.model.positional_embedding.device)
 
