@@ -109,7 +109,7 @@ class RosPack:
 
         self.camera_info.update(camera_info_msg.K, camera_info_msg.D, camera_info_msg.height, camera_info_msg.width)
 
-        r = convert_depth_to_phys_coord_using_realsense(0, 0, depth, self.camera_info)
+        r = convert_depth_to_phys_coord_using_realsense(300, 300, depth, self.camera_info)
         print(r)
 
 
