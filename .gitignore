@@ -136,3 +136,6 @@ weights/rd64-uni.pth
 weights.zip
 model_quantized.onnx
 model.onnx
+example_filtered.bag
+images/*
+output_video.mp4

@@ -38,7 +38,7 @@ def convert_depth_to_phys_coord_using_realsense(x, y, depth, cameraInfo):
 def load_model():
     model = CLIPDensePredT(version='ViT-B/16', reduce_dim=16)
     model.eval()
-    model.load_state_dict(torch.load('weights/rd16-uni.pth', map_location=torch.device('cpu')), strict=False)
+    model.load_state_dict(torch.load('weights/rd16-uni.pth', map_location=torch.device('cuda')), strict=False) #mmsm
     return model
 
 # Export the model to ONNX

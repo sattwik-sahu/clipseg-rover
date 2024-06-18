@@ -83,7 +83,7 @@ class CLIPDenseBase(nn.Module):
         import clip
 
         # prec = torch.FloatTensor
-        self.clip_model, _ = clip.load(version, device='cpu', jit=False)
+        self.clip_model, _ = clip.load(version, device='cuda', jit=False)
         self.model = self.clip_model.visual
 
         # if not None, scale conv weights such that we obtain n_tokens.
@@ -100,8 +100,8 @@ class CLIPDenseBase(nn.Module):
         else:
             self.reduce_cond = None        
 
-        self.film_mul = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim)
-        self.film_add = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim)
+        self.film_mul = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim, device='cuda', dtype=torch.float16)
+        self.film_add = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim, device='cuda', dtype=torch.float16)
         
         self.reduce = nn.Linear(768, reduce_dim)
 
@@ -138,7 +138,7 @@ class CLIPDenseBase(nn.Module):
 
             x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
             x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
-
+            
             x = torch.cat([self.model.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
 
             standard_n_tokens = 50 if self.model.conv1.kernel_size[0] == 32 else 197
@@ -188,7 +188,7 @@ class CLIPDenseBase(nn.Module):
 
             if self.model.proj is not None:
                 x = x @ self.model.proj
-
+            print('x', activations[0].device)
             return x, activations, affinities
 
     def sample_prompts(self, words, prompt_list=None):
@@ -274,7 +274,7 @@ class CLIPDensePredT(CLIPDenseBase):
                  add_calibration=False, rev_activations=False, trans_conv=None, n_tokens=None, complex_trans_conv=False):
         
         super().__init__(version, reduce_cond, reduce_dim, prompt, n_tokens)
-        # device = 'cpu'
+        # device = 'cuda'
 
         self.extract_layers = extract_layers
         self.cond_layer = cond_layer
@@ -309,7 +309,7 @@ class CLIPDensePredT(CLIPDenseBase):
             trans_conv_ks = (trans_conv, trans_conv)
 
         if not complex_trans_conv:
-            self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks)
+            self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks, dtype=torch.float16, device='cuda')
         else:
             assert trans_conv_ks[0] == trans_conv_ks[1]
 
@@ -322,13 +322,12 @@ class CLIPDensePredT(CLIPDenseBase):
                 nn.ReLU(),
                 nn.ConvTranspose2d(reduce_dim // 2, 1, kernel_size=tp_kernels[1], stride=tp_kernels[1]),               
             )
-
 #        self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks)
         
         assert len(self.extract_layers) == depth
 
-        self.reduces = nn.ModuleList([nn.Linear(768, reduce_dim) for _ in range(depth)])
-        self.blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads) for _ in range(len(self.extract_layers))])
+        self.reduces = nn.ModuleList([nn.Linear(768, reduce_dim, device='cuda', dtype=torch.float16) for _ in range(depth)])
+        self.blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads, device='cuda', dtype=torch.float16) for _ in range(len(self.extract_layers))])
         self.extra_blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads) for _ in range(extra_blocks)])
         
         # refinement and trans conv
@@ -346,7 +345,6 @@ class CLIPDensePredT(CLIPDenseBase):
     def forward(self, inp_image, conditional=None, return_features=False, mask=None):
 
         assert type(return_features) == bool
-
         inp_image = inp_image.to(self.model.positional_embedding.device)
 
         if mask is not None:
@@ -443,7 +441,7 @@ class CLIPDenseBaseline(CLIPDenseBase):
                  reduce_cond=None, limit_to_clip_only=False, n_tokens=None):
         
         super().__init__(version, reduce_cond, reduce_dim, prompt, n_tokens)
-        device = 'cpu'
+        device = 'cuda'
 
         # self.cond_layer = cond_layer
         self.extract_layer = extract_layer
