@@ -5,10 +5,10 @@ from cv_bridge import CvBridge
 import matplotlib.pyplot as plt
 from PIL import Image
 from torchvision import transforms
-from models.clipseg import CLIPDensePredT
+from models.clipseg_gpu import CLIPDensePredT
 import torch
 import numpy as np
-from run_utils import load_model, get_transform
+from run_utils import load_model, get_transform, get_square_image
 
 
 bag_file_path = 'example_filtered.bag'
@@ -24,13 +24,14 @@ with rosbag.Bag(bag_file_path, 'r') as bag:
         if topic == '/nerian/right/image_raw':
             PREDS = []
             cv_image = bridge.imgmsg_to_cv2(msg, "rgb8")
-            cv_image = cv_image[:592, int(400-592/2):int(400+592/2), :]
+            cv_image = get_square_image(cv_image)
             img = transform(cv_image).unsqueeze(0)
                 
-            # img = img.half()
-            # img = img.to('cuda')
+            img = img.half()
+            img = img.to('cuda')
             with torch.no_grad():
                 preds = model(img.repeat(len(prompts),1,1,1), prompts)[0]
+                
             _, ax = plt.subplots(1, len(prompts)+1, figsize=(15, 4))
             [a.axis('off') for a in ax.flatten()]
             ax[0].imshow(cv_image)
