@@ -14,10 +14,10 @@ pip install -r requirements.txt
 To run segmentation from a folder containing images.s
 
 ```python
-python run/run_folder.py --image_folder /path/to/images --prompts "prompt_1" "prompt_2" ... "prompt_n" --output_folder /path/to/output
+python run_folder.py --image_folder /path/to/images --prompts "prompt_1" "prompt_2" ... "prompt_n" --output_folder /path/to/output
 ```
 To run segmentation from a rosbag.
 
 ```python
-python run/run_bag.py --bag_file_path /path/to/rosbag --prompts "prompt_1" "prompt_2" ... "prompt_n" --topic <image_topic>
+python run_bag.py --bag_file_path /path/to/rosbag --prompts "prompt_1" "prompt_2" ... "prompt_n" --topic <image_topic>
 ```

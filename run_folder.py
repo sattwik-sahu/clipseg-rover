@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 
-def process_images(image_folder, prompts, output_folder):
+def process_images(image_folder, prompts, output_folder, resize_scale):
     model = load_model()
     transform = get_transform()
 
@@ -22,6 +22,9 @@ def process_images(image_folder, prompts, output_folder):
         frame = cv2.imread(image_path)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = get_square_image(frame)
+        if resize_scale != 1:
+            frame = cv2.resize(frame, (int(frame.shape[0]*resize_scale), int(frame.shape[0]*resize_scale)))
+
 
         img = transform(frame).unsqueeze(0)
         img = img.half()
@@ -47,6 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--image_folder', type=str, default='/workspace/RUGD_frames/creek', help='Folder containing the images.')
     parser.add_argument('--prompts', nargs='+', default=['navigable pathway', 'stone pathway'], help='List of prompts for the model.')
     parser.add_argument('--output_folder', type=str, default='/workspace/rugd_predictions/creek', help='Folder to save the output images.')
+    parser.add_argument('--resize_scale', type=float, default=1, help='resize scale parameter')
 
     args = parser.parse_args()
-    process_images(args.image_folder, args.prompts, args.output_folder)
+    process_images(args.image_folder, args.prompts, args.output_folder, args.resize_scale)
