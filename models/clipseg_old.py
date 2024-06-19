@@ -117,9 +117,11 @@ class CLIPDenseBase(nn.Module):
     
     def rescaled_pos_emb(self, new_size):
         assert len(new_size) == 2
-
+        print(self.token_shape)
         a = self.model.positional_embedding[1:].T.view(1, 768, *self.token_shape)
         b = nnf.interpolate(a, new_size, mode='bicubic', align_corners=False).squeeze(0).view(768, new_size[0]*new_size[1]).T
+        print('sss', self.model.positional_embedding[:1].shape, b.shape)
+        # return b
         return torch.cat([self.model.positional_embedding[:1], b])
 
     def visual_forward(self, x_inp, extract_layers=(), skip=False, mask=None):
@@ -145,6 +147,7 @@ class CLIPDenseBase(nn.Module):
 
             if x.shape[1] != standard_n_tokens:
                 new_shape = int(math.sqrt(x.shape[1]-1))
+                print(self.rescaled_pos_emb((new_shape, new_shape)).to(x.dtype)[None,:,:].shape, x.shape, new_shape)
                 x = x + self.rescaled_pos_emb((new_shape, new_shape)).to(x.dtype)[None,:,:]
             else:
                 x = x + self.model.positional_embedding.to(x.dtype)
@@ -309,7 +312,7 @@ class CLIPDensePredT(CLIPDenseBase):
             trans_conv_ks = (trans_conv, trans_conv)
 
         if not complex_trans_conv:
-            self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks, dtype=torch.float16, device='cuda')
+            self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks,  device='cuda')
         else:
             assert trans_conv_ks[0] == trans_conv_ks[1]
 
@@ -356,7 +359,7 @@ class CLIPDensePredT(CLIPDenseBase):
         bs, dev = inp_image.shape[0], x_inp.device
 
         cond = self.get_cond_vec(conditional, bs)
-
+        print('xcxc', x_inp.shape)
         visual_q, activations, _ = self.visual_forward(x_inp, extract_layers=[0] + list(self.extract_layers))
 
         activation1 = activations[0]

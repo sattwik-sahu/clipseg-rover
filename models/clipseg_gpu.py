@@ -83,7 +83,7 @@ class CLIPDenseBase(nn.Module):
         import clip
 
         # prec = torch.FloatTensor
-        self.clip_model, _ = clip.load(version, device='cpu', jit=False)
+        self.clip_model, _ = clip.load(version, device='cuda', jit=False)
         self.model = self.clip_model.visual
 
         # if not None, scale conv weights such that we obtain n_tokens.
@@ -100,8 +100,8 @@ class CLIPDenseBase(nn.Module):
         else:
             self.reduce_cond = None        
 
-        self.film_mul = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim)
-        self.film_add = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim)
+        self.film_mul = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim, device='cuda').half()
+        self.film_add = nn.Linear(512 if reduce_cond is None else reduce_cond, reduce_dim, device='cuda').half()
         
         self.reduce = nn.Linear(768, reduce_dim)
 
@@ -215,12 +215,10 @@ class CLIPDenseBase(nn.Module):
             cond = conditional
 
         # compute conditional from image
-        
         elif conditional is not None and type(conditional) == torch.Tensor:
             with torch.no_grad():
                 cond, _, _ = self.visual_forward(conditional)
         else:
-            print(type(conditional))
             raise ValueError('invalid conditional')
         return cond   
 
@@ -311,27 +309,27 @@ class CLIPDensePredT(CLIPDenseBase):
             trans_conv_ks = (trans_conv, trans_conv)
 
         if not complex_trans_conv:
-            self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks)
+            self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks, device='cuda').half()
         else:
             assert trans_conv_ks[0] == trans_conv_ks[1]
 
             tp_kernels = (trans_conv_ks[0] // 4, trans_conv_ks[0] // 4)
 
             self.trans_conv = nn.Sequential(
-                nn.Conv2d(reduce_dim, reduce_dim, kernel_size=3, padding=1),
+                nn.Conv2d(reduce_dim, reduce_dim, kernel_size=3, padding=1, device='cuda').half(),
                 nn.ReLU(),
-                nn.ConvTranspose2d(reduce_dim, reduce_dim // 2, kernel_size=tp_kernels[0], stride=tp_kernels[0]),
+                nn.ConvTranspose2d(reduce_dim, reduce_dim // 2, kernel_size=tp_kernels[0], stride=tp_kernels[0], device='cuda').half(),
                 nn.ReLU(),
-                nn.ConvTranspose2d(reduce_dim // 2, 1, kernel_size=tp_kernels[1], stride=tp_kernels[1]),               
+                nn.ConvTranspose2d(reduce_dim // 2, 1, kernel_size=tp_kernels[1], stride=tp_kernels[1], device='cuda').half(),               
             )
 
 #        self.trans_conv = nn.ConvTranspose2d(reduce_dim, 1, trans_conv_ks, stride=trans_conv_ks)
         
         assert len(self.extract_layers) == depth
 
-        self.reduces = nn.ModuleList([nn.Linear(768, reduce_dim) for _ in range(depth)])
-        self.blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads) for _ in range(len(self.extract_layers))])
-        self.extra_blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads) for _ in range(extra_blocks)])
+        self.reduces = nn.ModuleList([nn.Linear(768, reduce_dim, device='cuda').half() for _ in range(depth)])
+        self.blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads, device='cuda').half() for _ in range(len(self.extract_layers))])
+        self.extra_blocks = nn.ModuleList([nn.TransformerEncoderLayer(d_model=reduce_dim, nhead=n_heads, device='cuda').half() for _ in range(extra_blocks)])
         
         # refinement and trans conv
 
@@ -346,10 +344,8 @@ class CLIPDensePredT(CLIPDenseBase):
 
 
     def forward(self, inp_image, conditional=None, return_features=False, mask=None):
-        # print(return_features)
-        # assert type(return_features) == bool
-        return_features=True
-        conditional = 'person'
+
+        assert type(return_features) == bool
 
         inp_image = inp_image.to(self.model.positional_embedding.device)
 
@@ -362,6 +358,7 @@ class CLIPDensePredT(CLIPDenseBase):
         bs, dev = inp_image.shape[0], x_inp.device
 
         cond = self.get_cond_vec(conditional, bs)
+        # cond = cond.to('cpu').float()
 
         visual_q, activations, _ = self.visual_forward(x_inp, extract_layers=[0] + list(self.extract_layers))
 
@@ -372,7 +369,7 @@ class CLIPDensePredT(CLIPDenseBase):
 
         a = None
         for i, (activation, block, reduce) in enumerate(zip(_activations, self.blocks, self.reduces)):
-            
+            # activation = activation.to('cpu').float()
             if a is not None:
                 a = reduce(activation) + a
             else:
