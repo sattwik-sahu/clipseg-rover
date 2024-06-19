@@ -11,7 +11,7 @@ pip install -r requirements.txt
 ```
 
 ## Usage
-To run segmentation from a folder containing images.
+To run segmentation from a folder containing images.s
 
 ```python
 python run/run_folder.py --image_folder /path/to/images --prompts "prompt_1" "prompt_2" ... "prompt_n" --output_folder /path/to/output
