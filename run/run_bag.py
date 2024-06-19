@@ -12,12 +12,10 @@ def main(bag_file_path, prompts, topic):
     bridge = CvBridge()
     model = load_model()
     transform = get_transform()
-    i = 0
 
     with rosbag.Bag(bag_file_path, 'r') as bag:
         for i, (topic_msg, msg, t) in enumerate(bag.read_messages()):
             if topic_msg == topic:
-                PREDS = []
                 cv_image = bridge.imgmsg_to_cv2(msg, "rgb8")
                 cv_image = get_square_image(cv_image)
                 img = transform(cv_image).unsqueeze(0)
@@ -34,7 +32,6 @@ def main(bag_file_path, prompts, topic):
                 [ax[i + 1].text(0, -15, prompts[i]) for i in range(len(prompts))]
                 plt.savefig(f'images/{str(i).zfill(5)}.png')
                 plt.close()
-                i += 1
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process a ROS bag file and overlay image masks.')
